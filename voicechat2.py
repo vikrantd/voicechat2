@@ -18,7 +18,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from mutagen.oggopus import OggOpus
-import openai
+from openai import OpenAI
 
 # External endpoints
 SRT_ENDPOINT = os.getenv("SRT_ENDPOINT", "http://localhost:8005/inference")
@@ -133,10 +133,7 @@ class ConversationManager:
 
 conversation_manager = ConversationManager()
 
-# Replace the LLM_ENDPOINT with OpenAI API key
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = OPENAI_API_KEY
-
+client = OpenAI()
 
 async def transcribe_audio(audio_data, session_id, turn_id):
     conversation_manager.update_latency_metric(session_id, "srt_start", time.time())
@@ -301,12 +298,12 @@ async def generate_llm_response(websocket, session_id, text):
         first_token_received = False
         first_sentence_received = False
 
-        async for chunk in await openai.ChatCompletion.acreate(
+        async for chunk in await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=conversation + [{"role": "user", "content": text}],
             stream=True,
         ):
-            content = chunk["choices"][0].get("delta", {}).get("content", "")
+            content = chunk.choices[0].delta.content
             if content:
                 if not first_token_received:
                     conversation_manager.update_latency_metric(
