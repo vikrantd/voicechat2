@@ -135,6 +135,7 @@ conversation_manager = ConversationManager()
 
 client = OpenAI()
 
+
 async def transcribe_audio(audio_data, session_id, turn_id):
     conversation_manager.update_latency_metric(session_id, "srt_start", time.time())
     try:
@@ -298,7 +299,7 @@ async def generate_llm_response(websocket, session_id, text):
         first_token_received = False
         first_sentence_received = False
 
-        async for chunk in await client.chat.completions.create(
+        for chunk in client.chat.completions.create(
             model="gpt-4o-mini",
             messages=conversation + [{"role": "user", "content": text}],
             stream=True,

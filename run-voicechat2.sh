@@ -23,7 +23,7 @@ create_window() {
 byobu new-session -d -s voicechat2
 
 # FastAPI server (with Mamba activation)
-create_window "voicechat2" "mamba activate voicechat2 && uvicorn voicechat2:app --host 0.0.0.0 --port 8000 --reload"
+create_window "voicechat2" "mamba activate voicechat2 && uvicorn voicechat2:app --host 0.0.0.0 --port 80 --reload"
 
 # SRT server (HF transformers w/ distil-whisper)
 create_window "voicechat2" "mamba activate voicechat2 && uvicorn srt-server:app --host 0.0.0.0 --port 8005 --reload"
