@@ -21,7 +21,7 @@ from mutagen.oggopus import OggOpus
 import openai
 
 # External endpoints
-SRT_ENDPOINT = os.getenv("SRT_ENDPOINT", "http://localhost:8001/inference")
+SRT_ENDPOINT = os.getenv("SRT_ENDPOINT", "http://localhost:8005/inference")
 LLM_ENDPOINT = os.getenv("LLM_ENDPOINT", "http://localhost:8002/v1/chat/completions")
 TTS_ENDPOINT = os.getenv("TTS_ENDPOINT", "http://localhost:8003/tts")
 

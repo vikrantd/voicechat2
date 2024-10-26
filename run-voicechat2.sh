@@ -26,7 +26,7 @@ byobu new-session -d -s voicechat2
 create_window "voicechat2" "mamba activate voicechat2 && uvicorn voicechat2:app --host 0.0.0.0 --port 8000 --reload"
 
 # SRT server (HF transformers w/ distil-whisper)
-create_window "voicechat2" "mamba activate voicechat2 && uvicorn srt-server:app --host 0.0.0.0 --port 8001 --reload"
+create_window "voicechat2" "mamba activate voicechat2 && uvicorn srt-server:app --host 0.0.0.0 --port 8005 --reload"
 
 # LLM server (llama.cpp)
 create_window "llm" "llama.cpp/llama-server --host 127.0.0.1 --port 8002 -m $LLM_MODEL -ngl 99 -c $LLM_CONTEXT"
