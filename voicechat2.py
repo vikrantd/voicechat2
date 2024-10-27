@@ -19,6 +19,11 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from mutagen.oggopus import OggOpus
 from openai import OpenAI
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+load_dotenv()
+supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
 
 # External endpoints
 SRT_ENDPOINT = os.getenv("SRT_ENDPOINT", "http://localhost:8005/inference")
@@ -33,7 +38,7 @@ app.mount("/ui", StaticFiles(directory="ui"), name="ui")
 
 SYSTEM = {
     "role": "system",
-    "content": "You are a helpful AI voice assistant. We are interacting via voice so keep responses concise, no more than to a sentence or two unless the user specifies a longer response. You are running on an AMD workstation GPU, but no need to mention that unless specifically asked.",
+    "content": "You are a helpful AI voice assistant which can answer patient details to the doctor. You can also execute supabase queries to get patient details. Do not make up any information, only answer based on the information you have. Do not entertain any other questions.",
 }
 
 
@@ -289,6 +294,28 @@ async def process_and_stream(websocket: WebSocket, session_id, text):
         conversation_manager.sessions[session_id]["first_audio_sent"] = False
 
 
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_patient_info",
+            "description": "Get patient details from the supabase table called 'transcripts'. The table has these columns: id, created_at, patient_code, transcript, summary. The function should return the supabase query like `supabase.table('transcripts').select('*').eq('patient_code', patient_code).execute()`. Get only summary for most of the questions.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "supabase_query": {
+                        "type": "string",
+                        "description": "The supabase query to execute. e.g. supabase.table('transcripts').select('*').eq('patient_code', patient_code).execute()",
+                    },
+                },
+                "required": ["supabase_query"],
+                "additionalProperties": False,
+            },
+        },
+    }
+]
+
+
 async def generate_llm_response(websocket, session_id, text):
     conversation_manager.update_latency_metric(session_id, "llm_start", time.time())
     try:
@@ -298,13 +325,16 @@ async def generate_llm_response(websocket, session_id, text):
         accumulated_text = ""
         first_token_received = False
         first_sentence_received = False
+        func_call = {"name": None, "arguments": ""}
 
         for chunk in client.chat.completions.create(
             model="gpt-4o-mini",
             messages=conversation + [{"role": "user", "content": text}],
             stream=True,
+            tools=tools,
         ):
             content = chunk.choices[0].delta.content
+            delta = chunk.choices[0].delta
             if content:
                 if not first_token_received:
                     conversation_manager.update_latency_metric(
@@ -313,6 +343,23 @@ async def generate_llm_response(websocket, session_id, text):
                     first_token_received = True
                 complete_text += content
                 accumulated_text += content
+                if "function_call" in delta:
+                    if "name" in delta.function_call:
+                        func_call["name"] = delta.function_call["name"]
+                    if "arguments" in delta.function_call:
+                        func_call["arguments"] += delta.function_call["arguments"]
+                if chunk.choices[0].finish_reason == "function_call":
+                    # function call here using func_call
+                    logger.debug(f"Function call: {func_call}")
+                    supabase_query = func_call["arguments"]
+                    result = eval(supabase_query)
+                    logger.debug(f"Supabase query result: {result}")
+                    accumulated_text += (
+                        f"\n\nGetting the patient details, please wait..."
+                    )
+                    await generate_and_send_tts(websocket, accumulated_text)
+                    await process_and_stream(websocket, session_id, result)
+                    return
                 await websocket.send_json({"type": "text", "content": content})
 
                 # Check if we have a complete sentence

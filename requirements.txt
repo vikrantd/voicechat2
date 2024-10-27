@@ -15,3 +15,5 @@ torchaudio
 transformers
 accelerate
 openai
+supabase
+dotenv
