@@ -336,6 +336,8 @@ async def generate_llm_response(websocket, session_id, text):
             content = chunk.choices[0].delta.content
             delta = chunk.choices[0].delta
 
+            print(f"Content: {content}")
+            print(f"Finish reason: {chunk.choices[0].finish_reason}")
             if "function_call" in delta:
                 if "name" in delta.function_call:
                     func_call["name"] = delta.function_call["name"]
