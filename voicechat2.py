@@ -335,6 +335,24 @@ async def generate_llm_response(websocket, session_id, text):
         ):
             content = chunk.choices[0].delta.content
             delta = chunk.choices[0].delta
+
+            if "function_call" in delta:
+                if "name" in delta.function_call:
+                    func_call["name"] = delta.function_call["name"]
+                if "arguments" in delta.function_call:
+                    func_call["arguments"] += delta.function_call["arguments"]
+            if chunk.choices[0].finish_reason == "function_call":
+                # function call here using func_call
+                logger.debug(f"Function call: {func_call}")
+                supabase_query = func_call["arguments"]
+                result = str(eval(supabase_query))
+                logger.debug(f"Supabase query result: {result}")
+                await generate_and_send_tts(
+                    websocket, f"\n\nGetting the patient details, please wait..."
+                )
+                await process_and_stream(websocket, session_id, result)
+                return
+
             if content:
                 if not first_token_received:
                     conversation_manager.update_latency_metric(
@@ -343,24 +361,6 @@ async def generate_llm_response(websocket, session_id, text):
                     first_token_received = True
                 complete_text += content
                 accumulated_text += content
-                print(f"Content: {content}")
-                print(f"Finish reason: {chunk.choices[0].finish_reason}")
-                if "function_call" in delta:
-                    if "name" in delta.function_call:
-                        func_call["name"] = delta.function_call["name"]
-                    if "arguments" in delta.function_call:
-                        func_call["arguments"] += delta.function_call["arguments"]
-                if chunk.choices[0].finish_reason == "function_call":
-                    # function call here using func_call
-                    logger.debug(f"Function call: {func_call}")
-                    supabase_query = func_call["arguments"]
-                    result = eval(supabase_query)
-                    logger.debug(f"Supabase query result: {result}")
-                    await generate_and_send_tts(
-                        websocket, f"\n\nGetting the patient details, please wait..."
-                    )
-                    await process_and_stream(websocket, session_id, result)
-                    return
                 await websocket.send_json({"type": "text", "content": content})
 
                 # Check if we have a complete sentence
