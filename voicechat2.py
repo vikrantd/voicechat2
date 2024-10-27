@@ -336,14 +336,14 @@ async def generate_llm_response(websocket, session_id, text):
             content = chunk.choices[0].delta.content
             delta = chunk.choices[0].delta
 
-            print(f"Content: {content}")
+            print(f"Delta: {delta}")
             print(f"Finish reason: {chunk.choices[0].finish_reason}")
-            if "function_call" in delta:
+            if "tool_calls" in delta:
                 if "name" in delta.function_call:
                     func_call["name"] = delta.function_call["name"]
                 if "arguments" in delta.function_call:
                     func_call["arguments"] += delta.function_call["arguments"]
-            if chunk.choices[0].finish_reason == "function_call":
+            if chunk.choices[0].finish_reason == "tool_calls":
                 # function call here using func_call
                 logger.debug(f"Function call: {func_call}")
                 supabase_query = func_call["arguments"]
