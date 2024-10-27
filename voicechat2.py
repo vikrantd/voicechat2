@@ -343,6 +343,8 @@ async def generate_llm_response(websocket, session_id, text):
                     first_token_received = True
                 complete_text += content
                 accumulated_text += content
+                logger.info(f"Content: {content}")
+                logger.info(f"Finish reason: {chunk.choices[0].finish_reason}")
                 if "function_call" in delta:
                     if "name" in delta.function_call:
                         func_call["name"] = delta.function_call["name"]
@@ -354,10 +356,9 @@ async def generate_llm_response(websocket, session_id, text):
                     supabase_query = func_call["arguments"]
                     result = eval(supabase_query)
                     logger.debug(f"Supabase query result: {result}")
-                    accumulated_text += (
-                        f"\n\nGetting the patient details, please wait..."
+                    await generate_and_send_tts(
+                        websocket, f"\n\nGetting the patient details, please wait..."
                     )
-                    await generate_and_send_tts(websocket, accumulated_text)
                     await process_and_stream(websocket, session_id, result)
                     return
                 await websocket.send_json({"type": "text", "content": content})
