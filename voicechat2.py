@@ -343,8 +343,8 @@ async def generate_llm_response(websocket, session_id, text):
                     first_token_received = True
                 complete_text += content
                 accumulated_text += content
-                logger.info(f"Content: {content}")
-                logger.info(f"Finish reason: {chunk.choices[0].finish_reason}")
+                print(f"Content: {content}")
+                print(f"Finish reason: {chunk.choices[0].finish_reason}")
                 if "function_call" in delta:
                     if "name" in delta.function_call:
                         func_call["name"] = delta.function_call["name"]
