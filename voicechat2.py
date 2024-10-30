@@ -387,9 +387,11 @@ async def generate_llm_response(websocket, session_id, text):
             logger.debug(f"Supabase query: {supabase_query}")
             result = str(eval(json.loads(supabase_query)["supabase_query"]))
             logger.debug(f"Supabase query result: {result}")
-            complete_text = f"\n\nGetting the patient details, please wait..."
-            await generate_and_send_tts(websocket, complete_text)
-            await process_and_stream(websocket, session_id, result)
+            await process_and_stream(
+                websocket,
+                session_id,
+                f"Sumarize the result in simple language: {result}",
+            )
         # Send any remaining text
         if accumulated_text:
             logger.debug(f"Remaining text: {accumulated_text}")
