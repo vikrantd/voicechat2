@@ -414,26 +414,17 @@ async def generate_llm_response(websocket, session_id, text):
             try:
                 result = str(eval(json.loads(supabase_query)["supabase_query"]))
                 logger.debug(f"Supabase query result: {result}")
-                await generate_llm_response(
+                await process_and_stream(
                     websocket,
                     session_id,
                     f"Sumarize this result in simple language keep it breif, remove all punctuation: {result}",
                 )
-                conversation_manager.update_latency_metric(
-                    session_id, "tts_end", time.time()
-                )
-                conversation_manager.add_ai_message(session_id, complete_text)
             except Exception as e:
                 logger.error(f"Error executing supabase query: {str(e)}")
                 await generate_and_send_tts(
                     websocket,
                     "I am sorry, I am unable to get the patient details at this time. Please make sure the patient code is correct.",
                 )
-                accumulated_text = ""
-                conversation_manager.update_latency_metric(
-                    session_id, "tts_end", time.time()
-                )
-                conversation_manager.add_ai_message(session_id, complete_text)
 
         logger.debug(complete_text)
 
