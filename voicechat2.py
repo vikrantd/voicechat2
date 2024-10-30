@@ -294,7 +294,7 @@ async def process_and_stream(websocket: WebSocket, session_id, text):
         conversation_manager.sessions[session_id]["first_audio_sent"] = False
 
 
-tools = [
+tools_payload = [
     {
         "type": "function",
         "function": {
@@ -325,14 +325,13 @@ async def generate_llm_response(websocket, session_id, text):
         accumulated_text = ""
         first_token_received = False
         first_sentence_received = False
-        func_call = {"name": None, "arguments": ""}
         tools = []
 
         for chunk in client.chat.completions.create(
             model="gpt-4o-mini",
             messages=conversation + [{"role": "user", "content": text}],
             stream=True,
-            tools=tools,
+            tools=tools_payload,
         ):
             content = chunk.choices[0].delta.content
             delta = chunk.choices[0].delta
