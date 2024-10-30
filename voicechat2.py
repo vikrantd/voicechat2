@@ -375,9 +375,15 @@ async def generate_llm_response(websocket, session_id, text):
                 tools += chunk.choices[0].delta.tool_calls
 
         if len(tools) > 0:
+            func_call = {"name": None, "arguments": ""}
             # function call here using func_call
-            logger.debug(f"Function call: {tools}")
-            supabase_query = tools[0]["arguments"]
+            for tool in tools:
+                if hasattr(tool.function, "name"):
+                    func_call["name"] = tool.function.name
+                if hasattr(tool.function, "arguments"):
+                    func_call["arguments"] += tool.function.arguments
+            logger.debug(f"Function call: {func_call}")
+            supabase_query = func_call["arguments"]
             result = str(eval(supabase_query))
             logger.debug(f"Supabase query result: {result}")
             await generate_and_send_tts(
