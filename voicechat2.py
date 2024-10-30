@@ -385,13 +385,19 @@ async def generate_llm_response(websocket, session_id, text):
             logger.debug(f"Function call: {func_call}")
             supabase_query = func_call["arguments"]
             logger.debug(f"Supabase query: {supabase_query}")
-            result = str(eval(json.loads(supabase_query)["supabase_query"]))
+            try:
+                result = str(eval(json.loads(supabase_query)["supabase_query"]))
+            except Exception as e:
+                logger.error(f"Error executing supabase query: {str(e)}")
+                accumulated_text = "I am sorry, I am unable to get the patient details at this time. Please make sure the patient code is correct."
+                pass
             logger.debug(f"Supabase query result: {result}")
-            await process_and_stream(
+            process_and_stream(
                 websocket,
                 session_id,
-                f"Sumarize the result in simple language: {result}",
+                f"Sumarize this result in simple language keep it breif, remove all punctuation: {result}",
             )
+            accumulated_text = "Please wait while I get the patient details..."
         # Send any remaining text
         if accumulated_text:
             logger.debug(f"Remaining text: {accumulated_text}")
