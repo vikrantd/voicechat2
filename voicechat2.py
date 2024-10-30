@@ -299,7 +299,7 @@ tools_payload = [
         "type": "function",
         "function": {
             "name": "get_patient_info",
-            "description": "Get patient details from the supabase table called 'transcripts'. The table has these columns: id, created_at, patient_code, transcript, summary. The function should return the supabase query like `supabase.table('transcripts').select('*').eq('patient_code', patient_code).execute()`. Get only summary for most of the questions.",
+            "description": "Get patient details from the supabase table called 'transcripts'. The table has these columns: id, created_at, patient_code, transcript, summary. The function should return the supabase query like `supabase.table('transcripts').select('*').eq('patient_code', patient_code).execute()`. Get only summary for most of the questions. The patient code is like Patient 135, if user just says 135, then add Patient to it to make it `Patient 135`.",
             "parameters": {
                 "type": "object",
                 "properties": {
