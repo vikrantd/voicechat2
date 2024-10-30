@@ -384,13 +384,16 @@ async def generate_llm_response(websocket, session_id, text):
                     func_call["arguments"] += tool.function.arguments
             logger.debug(f"Function call: {func_call}")
             supabase_query = func_call["arguments"]
+            logger.debug(f"Supabase query: {supabase_query}")
+            import pdb
+
+            pdb.set_trace()
             result = str(eval(supabase_query))
             logger.debug(f"Supabase query result: {result}")
             await generate_and_send_tts(
                 websocket, f"\n\nGetting the patient details, please wait..."
             )
             await process_and_stream(websocket, session_id, result)
-            return
         # Send any remaining text
         if accumulated_text:
             logger.debug(f"Remaining text: {accumulated_text}")
