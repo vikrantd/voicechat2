@@ -383,13 +383,16 @@ async def generate_llm_response(websocket, session_id, text):
                 if hasattr(tool.function, "arguments"):
                     func_call["arguments"] += tool.function.arguments
             logger.debug(f"Function call: {func_call}")
-            await generate_and_send_tts(
-                websocket, "Please wait while I get the patient details..."
-            )
             supabase_query = func_call["arguments"]
             logger.debug(f"Supabase query: {supabase_query}")
             try:
                 result = str(eval(json.loads(supabase_query)["supabase_query"]))
+                logger.debug(f"Supabase query result: {result}")
+                await process_and_stream(
+                    websocket,
+                    session_id,
+                    f"Sumarize this result in simple language keep it breif, remove all punctuation: {result}",
+                )
             except Exception as e:
                 logger.error(f"Error executing supabase query: {str(e)}")
                 await generate_and_send_tts(
@@ -398,12 +401,6 @@ async def generate_llm_response(websocket, session_id, text):
                 )
                 accumulated_text = ""
                 pass
-            logger.debug(f"Supabase query result: {result}")
-            await process_and_stream(
-                websocket,
-                session_id,
-                f"Sumarize this result in simple language keep it breif, remove all punctuation: {result}",
-            )
 
         # Send any remaining text
         if accumulated_text:
