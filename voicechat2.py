@@ -326,6 +326,7 @@ async def generate_llm_response(websocket, session_id, text):
         first_token_received = False
         first_sentence_received = False
         func_call = {"name": None, "arguments": ""}
+        tools = []
 
         for chunk in client.chat.completions.create(
             model="gpt-4o-mini",
@@ -335,25 +336,6 @@ async def generate_llm_response(websocket, session_id, text):
         ):
             content = chunk.choices[0].delta.content
             delta = chunk.choices[0].delta
-
-            print(f"Delta: {delta}")
-            print(f"Finish reason: {chunk.choices[0].finish_reason}")
-            if "tool_calls" in delta:
-                if "name" in delta.function_call:
-                    func_call["name"] = delta.function_call["name"]
-                if "arguments" in delta.function_call:
-                    func_call["arguments"] += delta.function_call["arguments"]
-            if chunk.choices[0].finish_reason == "tool_calls":
-                # function call here using func_call
-                logger.debug(f"Function call: {func_call}")
-                supabase_query = func_call["arguments"]
-                result = str(eval(supabase_query))
-                logger.debug(f"Supabase query result: {result}")
-                await generate_and_send_tts(
-                    websocket, f"\n\nGetting the patient details, please wait..."
-                )
-                await process_and_stream(websocket, session_id, result)
-                return
 
             if content:
                 if not first_token_received:
@@ -390,6 +372,20 @@ async def generate_llm_response(websocket, session_id, text):
                             "first_audio_sent"
                         ] = True
 
+            if chunk.choices[0].delta.tool_calls:
+                tools += chunk.choices[0].delta.tool_calls
+
+        if len(tools) > 0:
+            # function call here using func_call
+            logger.debug(f"Function call: {tools}")
+            supabase_query = tools[0]["arguments"]
+            result = str(eval(supabase_query))
+            logger.debug(f"Supabase query result: {result}")
+            await generate_and_send_tts(
+                websocket, f"\n\nGetting the patient details, please wait..."
+            )
+            await process_and_stream(websocket, session_id, result)
+            return
         # Send any remaining text
         if accumulated_text:
             logger.debug(f"Remaining text: {accumulated_text}")
