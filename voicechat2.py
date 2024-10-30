@@ -388,7 +388,7 @@ async def generate_llm_response(websocket, session_id, text):
             try:
                 result = str(eval(json.loads(supabase_query)["supabase_query"]))
                 logger.debug(f"Supabase query result: {result}")
-                await process_and_stream(
+                await generate_llm_response(
                     websocket,
                     session_id,
                     f"Sumarize this result in simple language keep it breif, remove all punctuation: {result}",
