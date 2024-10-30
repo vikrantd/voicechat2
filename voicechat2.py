@@ -374,6 +374,32 @@ async def generate_llm_response(websocket, session_id, text):
             if chunk.choices[0].delta.tool_calls:
                 tools += chunk.choices[0].delta.tool_calls
 
+        # Send any remaining text
+        if accumulated_text:
+            logger.debug(f"Remaining text: {accumulated_text}")
+            if not first_sentence_received:
+                conversation_manager.update_latency_metric(
+                    session_id, "llm_first_sentence", time.time()
+                )
+                first_sentence_received = True
+                conversation_manager.update_latency_metric(
+                    session_id, "tts_start", time.time()
+                )
+            await generate_and_send_tts(websocket, accumulated_text)
+
+            if not conversation_manager.sessions[session_id]["first_audio_sent"]:
+                logger.debug("first_audio_response")
+                conversation_manager.update_latency_metric(
+                    session_id, "first_audio_response", time.time()
+                )
+                await websocket.send_json({"type": "first_audio_response"})
+                conversation_manager.sessions[session_id]["first_audio_sent"] = True
+
+        # Finished sending TTS
+        conversation_manager.update_latency_metric(session_id, "tts_end", time.time())
+
+        conversation_manager.add_ai_message(session_id, complete_text)
+
         if len(tools) > 0:
             func_call = {"name": None, "arguments": ""}
             # function call here using func_call
@@ -409,31 +435,6 @@ async def generate_llm_response(websocket, session_id, text):
                 )
                 conversation_manager.add_ai_message(session_id, complete_text)
 
-        # Send any remaining text
-        if accumulated_text:
-            logger.debug(f"Remaining text: {accumulated_text}")
-            if not first_sentence_received:
-                conversation_manager.update_latency_metric(
-                    session_id, "llm_first_sentence", time.time()
-                )
-                first_sentence_received = True
-                conversation_manager.update_latency_metric(
-                    session_id, "tts_start", time.time()
-                )
-            await generate_and_send_tts(websocket, accumulated_text)
-
-            if not conversation_manager.sessions[session_id]["first_audio_sent"]:
-                logger.debug("first_audio_response")
-                conversation_manager.update_latency_metric(
-                    session_id, "first_audio_response", time.time()
-                )
-                await websocket.send_json({"type": "first_audio_response"})
-                conversation_manager.sessions[session_id]["first_audio_sent"] = True
-
-        # Finished sending TTS
-        conversation_manager.update_latency_metric(session_id, "tts_end", time.time())
-
-        conversation_manager.add_ai_message(session_id, complete_text)
         logger.debug(complete_text)
 
     except Exception as e:
